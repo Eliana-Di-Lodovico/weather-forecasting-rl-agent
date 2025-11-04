@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 class WeatherDataGenerator:
     """Generates synthetic weather temperature data or simulates realistic German weather patterns."""
     
-    def __init__(self, days=365, seed=42, use_real_data=False, location='germany'):
+    def __init__(self, days=365, seed=42, use_real_data=True, location='germany'):
         """
         Initialize the weather data generator.
         
@@ -53,7 +53,7 @@ class WeatherDataGenerator:
         
         # Try to get last 10 years of data from API
         end_date = datetime(2025, 12, 31)
-        start_date = datetime(2016, 1, 1)
+        start_date = datetime(2015, 1, 1)
         
         try:
             # Open-Meteo Historical Weather API
@@ -72,16 +72,30 @@ class WeatherDataGenerator:
             print(f"  Coordinates: {latitude}°N, {longitude}°E")
             print(f"  Attempting to fetch from API...")
             
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, timeout=60)
+            """
+            This line sends an HTTP GET request to the Open-Meteo Historical Weather API with the specified parameters.
+            """
             response.raise_for_status()
-            
+            """
+            This line checks if the request was successful (status code 200). If not, it raises an HTTPError.
+            """
             data = response.json()
-            
+            """
+            This line parses the JSON response from the API into a Python dictionary called data.
+            """
+
+            """
+            Following lines:
+            The API returns weather data grouped by time resolution (e.g., "daily": daily averaged or summed values, one value per day)
+            Here we asked for "daily":"temperature_2m_mean", so the API sends the data inside a "daily" block.
+            """
+
             # Extract daily data
             if 'daily' in data and 'time' in data['daily']:
                 dates = pd.to_datetime(data['daily']['time'])
                 temperatures = data['daily']['temperature_2m_mean']
-                
+            
                 # Create DataFrame
                 df = pd.DataFrame({
                     'date': dates,
@@ -91,16 +105,21 @@ class WeatherDataGenerator:
                 # Remove any NaN values
                 df = df.dropna()
                 
-                print(f"  ✓ Successfully fetched {len(df)} days of real temperature data")
-                print(f"  Date range: {df['date'].min().strftime('%Y-%m-%d')} to {df['date'].max().strftime('%Y-%m-%d')}")
-                print(f"  Temperature range: {df['temperature'].min():.1f}°C to {df['temperature'].max():.1f}°C")
+                print(f"Successfully fetched {len(df)} days of real temperature data")
+                print(f"Date range: {df['date'].min().strftime('%Y-%m-%d')} to {df['date'].max().strftime('%Y-%m-%d')}")
+                print(f"Temperature range: {df['temperature'].min():.1f}°C to {df['temperature'].max():.1f}°C")
                 
                 return df
                 
         except Exception as e:
-            print(f"  ⚠ API not accessible: {type(e).__name__}")
-            print(f"  ℹ Generating realistic German weather simulation instead...")
+            print(f"API not accessible: {type(e).__name__}")
+            print(f"Generating realistic German weather simulation instead...")
         
+        """
+        type(e).__name__ gets the class name of the exception as a string (e.g., "ConnectionError", "Timeout", etc.)
+        This allows us to print the type of error that occurred without exposing sensitive details.
+        """
+
         # Fall back to realistic simulation
         return self._generate_realistic_german_data(start_date, end_date, location_name)
     
@@ -123,9 +142,9 @@ class WeatherDataGenerator:
         Returns:
             DataFrame with realistic German temperature data
         """
-        print(f"  Location: {location_name}")
-        print(f"  Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-        print(f"  Generating realistic German weather patterns...")
+        print(f"Location: {location_name}")
+        print(f"Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        print(f"Generating realistic German weather patterns...")
         
         # Generate dates
         num_days = (end_date - start_date).days + 1
@@ -167,9 +186,9 @@ class WeatherDataGenerator:
             'temperature': temperatures
         })
         
-        print(f"  ✓ Generated {len(df)} days of realistic temperature data")
-        print(f"  Temperature range: {df['temperature'].min():.1f}°C to {df['temperature'].max():.1f}°C")
-        print(f"  Average temperature: {df['temperature'].mean():.1f}°C (typical for Germany: ~10°C)")
+        print(f"Generated {len(df)} days of realistic temperature data")
+        print(f"Temperature range: {df['temperature'].min():.1f}°C to {df['temperature'].max():.1f}°C")
+        print(f"Average temperature: {df['temperature'].mean():.1f}°C (typical for Germany: ~10°C)")
         
         return df
     
@@ -181,7 +200,7 @@ class WeatherDataGenerator:
             DataFrame with date and temperature columns
         """
         # Generate dates
-        dates = pd.date_range(start='2023-01-01', periods=self.days, freq='D')
+        dates = pd.date_range(start='2016-01-01', periods=self.days, freq='D')
         
         # Generate temperatures with seasonal pattern
         # Base temperature around 15°C with seasonal variation
